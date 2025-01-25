@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date
+from sqlalchemy import Column, Integer, String, Date, ARRAY
 from .database import Base
 
 
@@ -10,4 +10,6 @@ class ExperienceDB(Base):
     description = Column(String)
     type = Column(String)
     requirements = Column(String)
+    category = Column(String)
+    tags = Column(ARRAY(String))
     created_at = Column(Date)

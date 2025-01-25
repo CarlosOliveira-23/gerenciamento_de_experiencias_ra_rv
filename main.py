@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.routes import experiences
+from app.models import experience
 
 app = FastAPI()
 

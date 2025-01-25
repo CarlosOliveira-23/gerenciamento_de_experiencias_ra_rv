@@ -62,17 +62,38 @@ class UserLogin(BaseModel):
     password: str
 
 
-@router.post("/login", response_model=Token)
-def login_for_access_token(form_data: UserLogin, db: SessionDatabase):
-    user = autenticate_user(db, form_data.username, form_data.password)
+def autenticate_user(db: Session, username: str, password: str):
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
+    return {"username": user.username, "role": user.role}
+
+
+@router.post("/login")
+def login_for_access_token(username: str, password: str, db: Session = Depends(get_db)):
+    user = autenticate_user(db, username, password)
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
+    access_token = create_access_token(data={"sub": user["username"], "role": user["role"]})
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+
+@router.post("/users")
+def create_user(username: str, password: str, role: str = "user", db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.username == username).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username already exists")
+
+    hashed_password = hash_password(password)
+    new_user = User(username=username, hashed_password=hashed_password, role=role)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return {"id": new_user.id, "username": new_user.username, "role": new_user.role}

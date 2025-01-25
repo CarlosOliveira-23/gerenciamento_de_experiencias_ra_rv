@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import date
+from app.models.experience_logs import ExperienceLog
 
 
 class Experience(BaseModel):

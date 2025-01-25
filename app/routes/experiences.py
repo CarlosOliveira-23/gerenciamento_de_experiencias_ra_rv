@@ -4,6 +4,7 @@ from typing import Optional, List
 from app.models.database import SessionLocal
 from app.models.experience_db import ExperienceDB
 from app.models.experience import Experience
+from app.models.experience_logs import ExperienceLog
 
 router = APIRouter()
 
@@ -35,6 +36,19 @@ def read_experiences(
 
     return query.offset(skip).limit(limit).all()
 
+
+@router.get("/experiences/{experience_id}", response_model=Experience)
+def get_experience(experience_id: int, db: Session = Depends(get_db)):
+    experience = db.query(ExperienceDB).filter(ExperienceDB.id == experience_id).first()
+    if not experience:
+        raise HTTPException(status_code=404, detail="Experience not found")
+
+    # Registrar o acesso à experiência
+    log = ExperienceLog(experience_id=experience_id)
+    db.add(log)
+    db.commit()
+
+    return experience
 
 
 # Atualizacao de experiencia

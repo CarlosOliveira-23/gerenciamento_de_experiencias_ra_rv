@@ -84,7 +84,6 @@ def login_for_access_token(username: str, password: str, db: Session = Depends(g
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-
 @router.post("/users")
 def create_user(username: str, password: str, role: str = "user", db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.username == username).first()
@@ -97,3 +96,10 @@ def create_user(username: str, password: str, role: str = "user", db: Session = 
     db.commit()
     db.refresh(new_user)
     return {"id": new_user.id, "username": new_user.username, "role": new_user.role}
+
+
+@router.get("/admin")
+def admin_only(current_user: dict = Depends(get_current_user)):
+    if current_user["role"] == "admin":
+        raise HTTPException(status_code=403, detail="Not enough privileges")
+    return {"message": "Bem-vindo, administrador!"}

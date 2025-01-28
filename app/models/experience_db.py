@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Date, ARRAY
-from .database import Base
+from database import Base
 
 
 class ExperienceDB(Base):
@@ -10,6 +10,6 @@ class ExperienceDB(Base):
     description = Column(String)
     type = Column(String)
     requirements = Column(String)
-    category = Column(String)
-    tags = Column(ARRAY(String))
+    category = Column(String)  # Certifique-se de que esta linha existe
+    tags = Column(String)  # Verifique se "tags" também está corretamente definido
     created_at = Column(Date)

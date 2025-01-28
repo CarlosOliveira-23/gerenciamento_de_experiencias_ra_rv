@@ -8,6 +8,9 @@ from app.routes.media import router as media_router
 from app.routes.review import router as review_router
 from app.routes.logs import router as logs_router
 from app.routes.views import router as views_router
+from app.routes.public_api import router as public_api_router
+from app.routes.sync_ra_rv import router as sync_router
+
 
 app = FastAPI()
 
@@ -18,6 +21,8 @@ app.include_router(media_router, prefix="/media")
 app.include_router(review_router, prefix="/reviews")
 app.include_router(logs_router, prefix="/logs")
 app.include_router(views_router, prefix="/views")
+app.include_router(public_api_router, prefix="/api")
+app.include_router(sync_router, prefix="/sync")
 
 
 @app.get("/")

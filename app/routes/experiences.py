@@ -104,3 +104,16 @@ def get_experience(id: int, user_id: int, db: Session = Depends(get_db)):
     log_experience_view(db, id, user_id)
 
     return experience
+
+
+@router.post("/experiences/{id}/participate", response_model=dict)
+def participate_experience(id: int, user_id: int, db: Session = Depends(get_db)):
+    """ Registra a participação do usuário em uma experiência e adiciona pontos """
+    experience = db.query(ExperienceDB).filter(ExperienceDB.id == id).first()
+    if not experience:
+        raise HTTPException(status_code=404, detail="Experience not found")
+
+    # Adicionar pontos ao usuário pela participação
+    add_points(db, user_id, 20)  # Exemplo: 20 pontos por participação
+
+    return {"message": "Participation registered successfully!"}

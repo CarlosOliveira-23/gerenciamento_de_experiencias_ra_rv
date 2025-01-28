@@ -10,6 +10,7 @@ from app.routes.logs import router as logs_router
 from app.routes.views import router as views_router
 from app.routes.public_api import router as public_api_router
 from app.routes.sync_ra_rv import router as sync_router
+from app.routes.ranking import router as ranking_router
 
 
 app = FastAPI()
@@ -23,6 +24,7 @@ app.include_router(logs_router, prefix="/logs")
 app.include_router(views_router, prefix="/views")
 app.include_router(public_api_router, prefix="/api")
 app.include_router(sync_router, prefix="/sync")
+app.include_router(ranking_router, prefix="/gamification")
 
 
 @app.get("/")

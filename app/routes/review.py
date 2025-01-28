@@ -7,6 +7,7 @@ from app.models.experience_db import ExperienceDB
 from pydantic import BaseModel, Field
 from datetime import datetime
 from sqlalchemy.sql import func
+from app.services.points import add_points
 
 
 router = APIRouter()
@@ -29,6 +30,7 @@ class ReviewCreate(BaseModel):
 
 @router.post("/experiences/{id}/reviews", response_model=dict)
 def create_review(id: int, review: ReviewCreate, db: Session = Depends(get_db)):
+    """ Adiciona uma avaliação e concede pontos ao usuário """
     experience = db.query(ExperienceDB).filter(ExperienceDB.id == id).first()
     if not experience:
         raise HTTPException(status_code=404, detail="Experience not found")
@@ -42,6 +44,8 @@ def create_review(id: int, review: ReviewCreate, db: Session = Depends(get_db)):
     db.add(new_review)
     db.commit()
     db.refresh(new_review)
+
+    add_points(db, review.user_id, 10)
 
     return {"message": "Review added successfully", "review_id": new_review.id}
 

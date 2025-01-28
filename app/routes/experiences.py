@@ -53,9 +53,9 @@ def get_experience(experience_id: int, db: Session = Depends(get_db)):
 
 # Atualizacao de experiencia
 @router.put("/experiences/{experience_id}", response_model=Experience)
-def update_experience(experience_id: int, experience: Experience, db: Session = Depends(get_db)):
+def update_experience(experience_id: int, experience: Experience, user_id: int, db: Session = Depends(get_db)):
     db_experience = db.query(ExperienceDB).filter(ExperienceDB.id == experience_id).first()
-    if db_experience is None:
+    if not db_experience:
         raise HTTPException(status_code=404, detail="Experience not found")
 
     for key, value in experience.dict(exclude_unset=True).items():
@@ -63,14 +63,44 @@ def update_experience(experience_id: int, experience: Experience, db: Session = 
 
     db.commit()
     db.refresh(db_experience)
+
+    log_experience_change(db, experience_id, user_id, "update")
+
     return db_experience
 
 
-@router.delete("/experiences/{experience_id}", response_model=Experience)
-def delete_experience(experience_id: int, db: Session = Depends(get_db)):
+@router.delete("/experiences/{experience_id}")
+def delete_experience(experience_id: int, user_id: int, db: Session = Depends(get_db)):
     db_experience = db.query(ExperienceDB).filter(ExperienceDB.id == experience_id).first()
-    if db_experience is None:
+    if not db_experience:
         raise HTTPException(status_code=404, detail="Experience not found")
+
     db.delete(db_experience)
     db.commit()
+
+    log_experience_change(db, experience_id, user_id, "delete")
+
+    return {"message": "Experience deleted successfully"}
+
+
+@router.post("/experiences", response_model=Experience)
+def create_experience(experience: Experience, user_id: int, db: Session = Depends(get_db)):
+    db_experience = ExperienceDB(**experience.dict())
+    db.add(db_experience)
+    db.commit()
+    db.refresh(db_experience)
+
+    log_experience_change(db, db_experience.id, user_id, "create")
+
     return db_experience
+
+
+@router.get("/experiences/{id}", response_model=Experience)
+def get_experience(id: int, user_id: int, db: Session = Depends(get_db)):
+    experience = db.query(ExperienceDB).filter(ExperienceDB.id == id).first()
+    if not experience:
+        raise HTTPException(status_code=404, detail="Experience not found")
+
+    log_experience_view(db, id, user_id)
+
+    return experience

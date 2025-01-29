@@ -104,7 +104,7 @@ def login_for_access_token(form_data: UserLogin, request: Request, db: Session =
     access_token = create_access_token(data={"sub": user["username"], "role": user["role"]})
     return {"access_token": access_token, "token_type": "bearer"}
 
-# **Criar usuário**
+
 @router.post("/users")
 def create_user(username: str, password: str, role: str = "user", db: Session = Depends(get_db)):
     existing_user = db.query(User).filter(User.username == username).first()
@@ -117,6 +117,7 @@ def create_user(username: str, password: str, role: str = "user", db: Session = 
     db.commit()
     db.refresh(new_user)
     return {"id": new_user.id, "username": new_user.username, "role": new_user.role}
+
 
 # **Rota protegida: Apenas para administradores**
 @router.get("/admin")

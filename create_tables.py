@@ -5,6 +5,7 @@ from app.models.schedule import ExperienceSchedule
 from app.models.review import ExperienceReview
 from app.models.experience_views import ExperienceView
 from app.models.user_points import UserPoints
+from app.models.login_attempts import LoginAttempt
 
 
 Base.metadata.create_all(bind=engine)

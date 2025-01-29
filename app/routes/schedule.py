@@ -18,7 +18,6 @@ def get_db():
         db.close()
 
 
-# Modelo Pydantic para criar agendamentos
 class ScheduleCreate(BaseModel):
     experience_id: int
     scheduled_at: datetime

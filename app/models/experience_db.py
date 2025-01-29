@@ -13,3 +13,4 @@ class ExperienceDB(Base):
     category = Column(String)
     tags = Column(String)
     created_at = Column(Date)
+    nrorg = Column(Integer, nullable=False)

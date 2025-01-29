@@ -5,6 +5,8 @@ from app.models.database import SessionLocal
 from app.models.experience_db import ExperienceDB
 from app.models.experience import Experience
 from app.models.experience_logs import ExperienceLog
+from app.auth import get_current_user
+from app.routes.ranking import add_points
 
 router = APIRouter()
 
@@ -17,15 +19,17 @@ def get_db():
         db.close()
 
 
-@router.get("/experiences", response_model=list[Experience])
+@router.get("/experiences", response_model=List[Experience])
 def read_experiences(
     skip: int = 0,
     limit: int = 10,
     category: Optional[str] = None,
     tags: Optional[str] = None,
     db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
 ):
-    query = db.query(ExperienceDB)
+    """ Retorna todas as experiências da empresa do usuário """
+    query = db.query(ExperienceDB).filter(ExperienceDB.nrorg == current_user["nrorg"])
 
     if category:
         query = query.filter(ExperienceDB.category == category)
@@ -38,25 +42,53 @@ def read_experiences(
 
 
 @router.get("/experiences/{experience_id}", response_model=Experience)
-def get_experience(experience_id: int, db: Session = Depends(get_db)):
-    experience = db.query(ExperienceDB).filter(ExperienceDB.id == experience_id).first()
-    if not experience:
-        raise HTTPException(status_code=404, detail="Experience not found")
+def get_experience(experience_id: int, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    """ Retorna os detalhes de uma experiência da empresa do usuário """
+    experience = db.query(ExperienceDB).filter(
+        ExperienceDB.id == experience_id,
+        ExperienceDB.nrorg == current_user["nrorg"]
+    ).first()
 
-    # Registrar o acesso à experiência
-    log = ExperienceLog(experience_id=experience_id)
+    if not experience:
+        raise HTTPException(status_code=404, detail="Experiência não encontrada")
+
+    log = ExperienceLog(experience_id=experience_id, user_id=current_user["username"], action="view")
     db.add(log)
     db.commit()
 
     return experience
 
 
-# Atualizacao de experiencia
+@router.post("/experiences", response_model=Experience)
+def create_experience(experience: Experience, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    """ Cria uma nova experiência para a empresa do usuário """
+    db_experience = ExperienceDB(**experience.dict(), nrorg=current_user["nrorg"])
+    db.add(db_experience)
+    db.commit()
+    db.refresh(db_experience)
+
+    log = ExperienceLog(experience_id=db_experience.id, user_id=current_user["username"], action="create")
+    db.add(log)
+    db.commit()
+
+    return db_experience
+
+
 @router.put("/experiences/{experience_id}", response_model=Experience)
-def update_experience(experience_id: int, experience: Experience, user_id: int, db: Session = Depends(get_db)):
-    db_experience = db.query(ExperienceDB).filter(ExperienceDB.id == experience_id).first()
+def update_experience(
+    experience_id: int,
+    experience: Experience,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """ Atualiza uma experiência da empresa do usuário """
+    db_experience = db.query(ExperienceDB).filter(
+        ExperienceDB.id == experience_id,
+        ExperienceDB.nrorg == current_user["nrorg"]
+    ).first()
+
     if not db_experience:
-        raise HTTPException(status_code=404, detail="Experience not found")
+        raise HTTPException(status_code=404, detail="Experiência não encontrada")
 
     for key, value in experience.dict(exclude_unset=True).items():
         setattr(db_experience, key, value)
@@ -64,56 +96,45 @@ def update_experience(experience_id: int, experience: Experience, user_id: int, 
     db.commit()
     db.refresh(db_experience)
 
-    log_experience_change(db, experience_id, user_id, "update")
+    log = ExperienceLog(experience_id=experience_id, user_id=current_user["username"], action="update")
+    db.add(log)
+    db.commit()
 
     return db_experience
 
 
 @router.delete("/experiences/{experience_id}")
-def delete_experience(experience_id: int, user_id: int, db: Session = Depends(get_db)):
-    db_experience = db.query(ExperienceDB).filter(ExperienceDB.id == experience_id).first()
+def delete_experience(experience_id: int, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    """ Exclui uma experiência da empresa do usuário """
+    db_experience = db.query(ExperienceDB).filter(
+        ExperienceDB.id == experience_id,
+        ExperienceDB.nrorg == current_user["nrorg"]
+    ).first()
+
     if not db_experience:
-        raise HTTPException(status_code=404, detail="Experience not found")
+        raise HTTPException(status_code=404, detail="Experiência não encontrada")
 
     db.delete(db_experience)
     db.commit()
 
-    log_experience_change(db, experience_id, user_id, "delete")
-
-    return {"message": "Experience deleted successfully"}
-
-
-@router.post("/experiences", response_model=Experience)
-def create_experience(experience: Experience, user_id: int, db: Session = Depends(get_db)):
-    db_experience = ExperienceDB(**experience.dict())
-    db.add(db_experience)
+    log = ExperienceLog(experience_id=experience_id, user_id=current_user["username"], action="delete")
+    db.add(log)
     db.commit()
-    db.refresh(db_experience)
 
-    log_experience_change(db, db_experience.id, user_id, "create")
-
-    return db_experience
+    return {"message": "Experiência excluída com sucesso"}
 
 
-@router.get("/experiences/{id}", response_model=Experience)
-def get_experience(id: int, user_id: int, db: Session = Depends(get_db)):
-    experience = db.query(ExperienceDB).filter(ExperienceDB.id == id).first()
+@router.post("/experiences/{experience_id}/participate", response_model=dict)
+def participate_experience(experience_id: int, db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    """ Registra a participação do usuário e adiciona pontos """
+    experience = db.query(ExperienceDB).filter(
+        ExperienceDB.id == experience_id,
+        ExperienceDB.nrorg == current_user["nrorg"]
+    ).first()
+
     if not experience:
-        raise HTTPException(status_code=404, detail="Experience not found")
+        raise HTTPException(status_code=404, detail="Experiência não encontrada")
 
-    log_experience_view(db, id, user_id)
+    add_points(db, current_user["username"], 20)
 
-    return experience
-
-
-@router.post("/experiences/{id}/participate", response_model=dict)
-def participate_experience(id: int, user_id: int, db: Session = Depends(get_db)):
-    """ Registra a participação do usuário em uma experiência e adiciona pontos """
-    experience = db.query(ExperienceDB).filter(ExperienceDB.id == id).first()
-    if not experience:
-        raise HTTPException(status_code=404, detail="Experience not found")
-
-    # Adicionar pontos ao usuário pela participação
-    add_points(db, user_id, 20)  # Exemplo: 20 pontos por participação
-
-    return {"message": "Participation registered successfully!"}
+    return {"message": "Participação registrada com sucesso!"}

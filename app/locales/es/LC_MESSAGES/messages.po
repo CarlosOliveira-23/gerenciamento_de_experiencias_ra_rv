@@ -1,0 +1,22 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: es\n"
+
+msgid "Welcome to the Experience Manager"
+msgstr "Bienvenido al Administrador de Experiencias"
+
+msgid "Invalid username or password"
+msgstr "Usuario o contraseña inválidos"
+
+msgid "Access denied. Admin only."
+msgstr "Acceso denegado. Solo para administradores."
+
+msgid "Experience not found"
+msgstr "Experiencia no encontrada"
+
+msgid "Experience deleted successfully"
+msgstr "Experiencia eliminada con éxito"
+
+msgid "Participation registered successfully!"
+msgstr "¡Participación registrada con éxito!"

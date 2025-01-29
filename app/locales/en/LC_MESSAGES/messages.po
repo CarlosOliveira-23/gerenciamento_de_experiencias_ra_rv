@@ -1,0 +1,8 @@
+msgid "Welcome to the RA/RV Experience Manager"
+msgstr "Welcome to the RA/RV Experience Manager"
+
+msgid "Invalid credentials"
+msgstr "Invalid credentials"
+
+msgid "Access denied"
+msgstr "Access denied"

@@ -10,20 +10,21 @@ from app.models.database import SessionLocal
 from app.utils import verify_password, hash_password
 from app.models.login_attempts import LoginAttempt
 from fastapi.security import OAuth2PasswordBearer
+from app.utils.i18n import get_locale_from_request, translate
 
-# Configuração de Segurança
+
 SECRET_KEY = "Teste_segredo"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# Hashing de senha
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Configuração do FastAPI
+
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-# **Função para obter o banco de dados**
+
 def get_db():
     db = SessionLocal()
     try:
@@ -31,40 +32,42 @@ def get_db():
     finally:
         db.close()
 
-# **Modelos Pydantic**
+
 class Token(BaseModel):
     access_token: str
     token_type: str
+
 
 class TokenData(BaseModel):
     username: Optional[str] = None
     role: Optional[str] = None
 
+
 class UserLogin(BaseModel):
     username: str
     password: str
 
-# **Registrar tentativas de login**
+
 def log_login_attempt(db: Session, username: str, ip: str, success: bool):
     attempt = LoginAttempt(username=username, ip_address=ip, success=1 if success else 0)
     db.add(attempt)
     db.commit()
 
-# **Autenticar usuário**
+
 def authenticate_user(db: Session, username: str, password: str):
     user = db.query(User).filter(User.username == username).first()
     if not user or not verify_password(password, user.hashed_password):
         return None
     return {"username": user.username, "role": user.role}
 
-# **Criar um token de acesso**
+
 def create_access_token(data: Dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta if expires_delta else timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# **Obter o usuário autenticado**
+
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -81,7 +84,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     except JWTError:
         raise credentials_exception
 
-# **Rota para Login**
+
 @router.post("/login", response_model=Token)
 def login_for_access_token(form_data: UserLogin, request: Request, db: Session = Depends(get_db)):
     """Processa login e registra tentativas"""
@@ -92,7 +95,7 @@ def login_for_access_token(form_data: UserLogin, request: Request, db: Session =
         log_login_attempt(db, form_data.username, ip, False)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Usuário ou senha incorretos",
+            detail=translate("Invalid credentials", lang),
             headers={"WWW-Authenticate": "Bearer"},
         )
 

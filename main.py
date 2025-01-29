@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from app.routes import experiences
 from app.routes.statistics import router as statistics_router
@@ -11,6 +11,7 @@ from app.routes.public_api import router as public_api_router
 from app.routes.sync_ra_rv import router as sync_router
 from app.routes.ranking import router as ranking_router
 from app.routes.security import router as security_router
+from app.utils.i18n import get_locale_from_request, translate
 
 app = FastAPI(title="Gerenciador de Experiências RA/RV")
 
@@ -30,5 +31,6 @@ app.include_router(experiences.router, prefix="/experiences")
 
 
 @app.get("/")
-def root():
-    return {"message": "Gerenciador de Experiencias RA/RV"}
+def root(request: Request):
+    lang = get_locale_from_request(request)
+    return {"message": translate("Welcome to the RA/RV Experience Manager", lang)}
